@@ -1,0 +1,72 @@
+#load thecsvfiles thatcontain test and train 
+#for the predicting the number of people who survived in the titanic 
+titanic.test<- read.csv("C:/Users/Herman/Downloads/titanic/test.csv")
+
+titanic.train<- read.csv("C:/Users/Herman/Downloads/titanic/train.csv")
+#check the median of train dataset
+median(titanic.train,na.rm=TRUE)
+
+#create a collumn with logical TRUE for train data set
+titanic.train$IsTrainSet<- TRUE
+
+#create a collumn with logical FALSE for test data set
+titanic.test$IsTrainSet<- FALSE
+
+#creat collumn survived in test data 
+titanic.test$Survived<- NA
+
+#row combine test and train data sets
+titanic.full<- rbind(titanic.train,titanic.test)
+
+
+#remove the element with empty collumn and placing into most occurring 
+titanic.full[titanic.full$Embarked=="","Embarked"]<- "S"
+#create the median for Age
+age.median<- median(titanic.full$Age,na.rm = TRUE)
+
+#replace the NA with median
+titanic.full[is.na(titanic.full$Age),"Age"]<- age.median
+
+#create median for Fare
+fare.median<- median(titanic.full$Fare,na.rm = TRUE)
+
+#replace NAs with median
+titanic.full[is.na(titanic.full$Fare),"Fare"]<- fare.median
+#split thejoined databack to train and test 
+titanic.train<- titanic.full[titanic.full$IsTrainSet==TRUE,]
+titanic.test<-  titanic.full[!titanic.full$IsTrainSet==TRUE,]
+#categorical casting
+titanic.full$Pclass<-as.factor(titanic.full$Pclass)
+titanic.full$Sex<-as.factor(titanic.full$Sex)
+titanic.full$Embarked<-as.factor(titanic.full$Embarked)
+titanic.train$Survived<-as.factor(titanic.train$Survived)
+
+#create the equation for prediction
+Survived.eqn<-"Survived~Pclass+Sex+Age+SibSp+Parch+Fare+Embarked"
+
+#formula for prediction
+survived.formula<-as.formula(Survived.eqn)
+
+#load the package randomForest
+library(randomForest)
+
+#create a model
+titanic.model<-randomForest(formula=survived.formula,data=titanic.train,ntree=500,mtry=3,nodesize=0.01*nrow(titanic.test))
+
+#features for prediction
+Survived.features<-"Pclass+Sex+Age+SibSp+Parch+Fare+Embarked"
+
+#predict for survived
+Survived<-predict(titanic.model,newdata = titanic.test)
+
+#create the PassengerId
+PassengerId<- titanic.test$PassengerId
+
+#create the dataframe for PassengerId
+output.df<-as.data.frame(PassengerId)
+
+#add collumn Survived
+output.df$Survived<- Survived
+
+#write the csv as requested by kaggle competition
+write.csv(output.df,file = "kaggle_submission.csv",row.names = FALSE)
